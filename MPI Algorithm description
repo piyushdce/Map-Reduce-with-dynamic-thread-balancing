@@ -1,0 +1,33 @@
+Please refer to attached image MPI Algo.jpg to get a better understanding of algo.
+
+MPI Process: The MPI processes lives throughout the program from reading input files to writing output files. 
+Each process reads the entire set of input files for load balancing. 
+The processes then spawn threads which run the OpenMP map reduce algorithm.
+
+OpenMP Map Reduce with DTB: The spawned threads perform the reader, mapper and reducer work with Dynamic Thread Balancing as in OpenMP. 
+The number of buckets in mapper hash table is chosen as 160 because it is divisible by 2,4,8,16 and makes the communication symmetric.
+
+MPI Barrier: An explicit MPI barrier is used as communication cannot start until all the spawned threads have completed their work. 
+
+Inter Process Communication: Each process has its own reducer hash table of size num_buckets*NumP but only ‘num_buckets’ 
+buckets are filled. Out of these (‘num_buckets’/NumP) buckets belong to the own process while the remaining buckets are to be 
+sent to NumP -1 processes. Thus, each process sends and receives (num_buckets/NumP) buckets from other process. 
+Each bucket is a 1D vector of struct. Communication is done one struct at a time in two steps. First the length of the bucket is 
+sent and then the actual struct are sent to receiving process. The communication is bidirectional and non-blocking which 
+means there could be many pair of processes communicating at a time. The received buckets are put in appropriate vacant spaces 
+of the reducer hash tables.
+
+Combined Hash Tables: Each process then combines its own buckets with the buckets received from other processes into a subset 
+of total Hash Table which contains num_buckets/NumP buckets each.
+
+Writers: The process which has finished combining hash tables become a writer processes which reads the combined Hash Tables 
+and output words into separate files.
+
+Output Files: Output files contain word - count pair in a line. Output files = NumP
+
+
+
+
+
+
+
