@@ -1,0 +1,24 @@
+A big challenge in MapReduce problem is to decide the number of reader, mapper and reducer threads. The ideal number of readers, mappers 
+and reducers would vary on factors like number of available threads, type of input files, size of cache and the ratio of reader to 
+mapper and mapper to reducer’s work. To overcome this problem, we have made an attempt to dynamically balance the threads 
+between readers and mappers. The algorithm works as follows.
+•	A threshold variable is initialized to #Threads/2.
+•	Threads with thread ID < threshold would be readers and thread ID > threshold would be mappers.
+•	As the readers put work in Mapper Q, the master thread monitors the size of Mapper Q.
+•	If the Mapper Q size exceeds > 75% of capacity, i.e. Mapper Q is growing rapidly, the mapper threads are slow and 
+thus more mappers are needed. The threshold is decreased by 1.
+•	If the Mapper Q size reduces to < 25% of capacity, i.e. Mapper Q is shrinking rapidly, the reader threads are slow and 
+thus more readers are needed. The threshold is increased by 1.
+•	An equilibrium stage is obtained when Mapper Q size remains between 25% to 75% of the capacity. The threshold is not changed. 
+
+Advantages:
+•	Prevents dynamic memory resizing by keeping the Mapper Q size optimum.
+•	Can achieve optimum thread utilization for different work loads and any number of threads.
+•	Helps in better cache utilization by keeping the Mapper Q size optimum which prevents frequent cache evictions.
+Disadvantages:
+•	Threshold adjustment is an overhead. This overhead is a function of input workload in our implementation.
+Overhead reduces with increasing number of threads as only master thread varies threshold.
+•	The Mapper Q should fit within the available cache otherwise the technique is not effective. Thus, Mapper Q capacity needs to be 
+tuned according to machine.
+
+
