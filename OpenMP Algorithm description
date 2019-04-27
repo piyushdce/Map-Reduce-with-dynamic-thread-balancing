@@ -1,0 +1,33 @@
+The number of readers and mappers are controlled by Dynamic Thread Balancing (explained separately)
+while the reducers and writers are always equal to the available number of threads. 
+Please refer to attached image OpenMP Algo.jpg for a better understanding of algo.
+
+Reader Threads: Reader Threads parse input file from a queue of unread files. 
+They look for all possible punctuations and collect words, separated by space. 
+Thousands of words separated by space are arranged in a 1D vector which is then pushed into the Map work Q as one work item for the mapper.
+
+Map Work Q (MapQ): This is a shared work queue from which the mappers get work. 
+It is a giant 2D vector of chars. Reader threads put work on the MapQ after acquiring a lock. 
+To minimize the contention time to access the MapQ, the reader threads combine thousands of work items (words) into a 1D vector 
+of chars and push it into MapQ. The mapper threads also acquire a lock to pop out one row (1D Vector) from the MapQ. 
+The size of a row of MapQ must be optimized so that neither there is a lot of contention nor there is load imbalance between mapper threads.
+
+Hash Table: Hash table is implemented with 2D vector of structs. Each struct has a key (char [50]) and a value (integer). 
+The number of buckets in hash table is kept close to 120 for any number of threads for a fair comparison as hash search time would 
+reduce if buckets are more. The number of buckets was chosen to achieve a balance of run time and reasonable bucket size with good 
+distribution. Each mapper thread creates its own hash table and hence no lock is needed to write into a mapper hash table.
+
+Hash Function: The hash function used is (Sum of Ascii of all the characters) % #Buckets. 
+This hash function gives very good distribution of words among buckets.
+
+Barrier: This is an implicit barrier. The reducers do not start work until all mappers are finished. 
+This greatly simplifies the implementation as the reducers only work on finalized hash tables.
+
+Reducers: The reducers merge all mapper hash tables into a single hash table: Reducer Hash Table. 
+Each reducer picks #buckets/#threads number of buckets from all mapper hash tables. 
+The index is not calculated again as the Reducer Hash table has same number of buckets as the mapper hash table. 
+
+Writers: Each Reducer thread becomes a writer after finishing its work. 
+Reducers and writers can work in parallel as they do not work on overlapping buckets. 
+Each writer creates an output file named <tid+1>.txt
+Output Files: Output files contain word - count pair in a line. Output files = num_threads.
